@@ -322,7 +322,9 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
         [self _endSelectionDotFixTimer];
     }
 }
-
+- (void)WUpdateDot {
+    [self _updateSelectionView];
+}
 /// Update inner contains's size.
 - (void)_updateInnerContainerSize {
     CGSize size = [self _getVisibleSize];
@@ -1770,7 +1772,7 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
         NSString *canonical = [NSLocale canonicalLocaleIdentifierFromString:preferred];
         if (canonical.length == 0) canonical = @"en";
         strings = dic[canonical];
-        if (!strings  && [canonical containsString:@"_"]) {
+        if (!strings  && ([canonical rangeOfString:@"_"].location != NSNotFound)) {
             NSString *prefix = [canonical componentsSeparatedByString:@"_"].firstObject;
             if (prefix.length) strings = dic[prefix];
         }
@@ -2310,6 +2312,12 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
     _containerView.debugOption = debugOption;
 }
 
+- (void)setDotOnSelectionView:(BOOL)dotOnSelectionView {
+    _dotOnSelectionView = dotOnSelectionView;
+    _selectionView.dotOnSelf = dotOnSelectionView;
+    self.clipsToBounds = NO;
+}
+
 - (YYTextDebugOption *)debugOption {
     return _containerView.debugOption;
 }
@@ -2558,6 +2566,9 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
         } else {
             _trackingRange = _selectedTextRange;
             if (_state.trackingGrabber) {
+                if ([self.delegate respondsToSelector:@selector(textViewTouchesMovedWhenTrackingGrabber)]) {
+                    [self.delegate textViewTouchesMovedWhenTrackingGrabber];
+                }
                 self.panGestureRecognizer.enabled = NO;
                 [self _hideMenu];
                 [self _updateTextRangeByTrackingGrabber];
@@ -2650,6 +2661,9 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
                     else [self _showMenu];
                 }
             } else if (_state.trackingGrabber) {
+                if ([self.delegate respondsToSelector:@selector(textViewTouchesEndedWhenTrackingGrabber)]) {
+                    [self.delegate textViewTouchesEndedWhenTrackingGrabber];
+                }
                 [self _updateTextRangeByTrackingGrabber];
                 [self _showMenu];
             } else if (_state.trackingPreSelect) {
@@ -3680,7 +3694,7 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
     } else if ([fontName.lowercaseString isEqualToString:@"system bold"]) {
         font = [UIFont boldSystemFontOfSize:font.pointSize];
     } else {
-        if ([self fontIsBold_:font] && ![fontName.lowercaseString containsString:@"bold"]) {
+        if ([self fontIsBold_:font] && ([fontName.lowercaseString rangeOfString:@"bold"].location == NSNotFound)) {
             font = [UIFont fontWithName:fontName size:font.pointSize];
             font = [self boldFont_:font];
         } else {
@@ -3720,7 +3734,7 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
     } else if ([fontName.lowercaseString isEqualToString:@"system bold"]) {
         font = [UIFont boldSystemFontOfSize:font.pointSize];
     } else {
-        if ([self fontIsBold_:font] && ![fontName.lowercaseString containsString:@"bold"]) {
+        if ([self fontIsBold_:font] && ([fontName.lowercaseString rangeOfString:@"bold"].location == NSNotFound)) {
             font = [UIFont fontWithName:fontName size:font.pointSize];
             font = [self boldFont_:font];
         } else {
@@ -3787,7 +3801,6 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
         self.debugOption = debugOption;
     }
 }
-
 #pragma mark - Dark mode Adapter
 
 #ifdef __IPHONE_13_0
@@ -3803,4 +3816,5 @@ typedef NS_ENUM(NSUInteger, YYTextMoveDirection) {
     }
 }
 #endif
+
 @end
